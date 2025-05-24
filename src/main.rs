@@ -232,7 +232,33 @@ impl ServedDir {
         Self(Arc::new(inner))
     }
 
-    fn get_response(
+    fn get_file(
+        &self,
+        path: String,
+        encoding: Encoding,
+        if_none_match: IfNoneMatch,
+    ) -> Option<Response> {
+        // guard against getting status code pages. use `.get_status(...)` for that
+        if let Some(prefix) = path.strip_suffix(".html") {
+            if prefix.len() == 3 && prefix.chars().all(|c| c.is_ascii_digit()) {
+                return None;
+            }
+        }
+
+        self.get_file_directly(path, encoding, if_none_match)
+    }
+
+    fn get_status(&self, status: StatusCode, encoding: Encoding) -> Response {
+        let mut resp = self
+            .get_file_directly(format!("{}.html", status.as_u16()), encoding, None.into())
+            .unwrap_or_else(|| Response::new(Body::from(status.to_string())));
+        *resp.status_mut() = status;
+        // it's an error page, so we don't know what it's really supposed to be
+        resp.headers_mut().remove(header::ACCEPT_ENCODING);
+        resp
+    }
+
+    fn get_file_directly(
         &self,
         mut path: String,
         encoding: Encoding,
@@ -297,6 +323,7 @@ impl ServedFile {
     }
 }
 
+// TODO: switch this to automaitcally try compressing and bail out if the size isn't better
 enum File {
     Data(DataFile),
     Text(TextFile),
@@ -440,45 +467,20 @@ async fn main() {
     axum::serve(listener, app).await.unwrap();
 }
 
-// TODO: make a wrapper around accessing `dir` that allows for fetching a page representing a
-// status code while denying accessing the status code page otherwise
 async fn handle_middleware_error(dir: ServedDir, err: BoxError) -> Response {
-    if err.is::<tower::load_shed::error::Overloaded>() {
-        // TODO: return from `dir`
-        Response::builder()
-            .status(StatusCode::SERVICE_UNAVAILABLE)
-            .body(Body::empty())
-            .unwrap()
+    let status = if err.is::<tower::load_shed::error::Overloaded>() {
+        StatusCode::SERVICE_UNAVAILABLE
     } else if err.is::<tower::timeout::error::Elapsed>() {
-        // TODO: return from `dir`
-        Response::builder()
-            .status(StatusCode::REQUEST_TIMEOUT)
-            .body(Body::empty())
-            .unwrap()
+        StatusCode::REQUEST_TIMEOUT
     } else {
-        // TODO: log and allow customizing this
-        Response::builder()
-            .status(StatusCode::INTERNAL_SERVER_ERROR)
-            .body(Body::empty())
-            .unwrap()
-    }
+        StatusCode::INTERNAL_SERVER_ERROR
+    };
+    dir.get_status(status, Encoding::default())
 }
 
-fn not_found(dir: ServedDir, encoding: Encoding) -> Response {
-    let mut resp = dir
-        .get_response("404.html".to_owned(), encoding, None.into())
-        .expect("TODO: special case known good paths?");
-
-    // 404 shouldn't have the normal HTML-file response properties
-    *resp.status_mut() = StatusCode::NOT_FOUND;
-    resp.headers_mut().remove(header::ACCEPT_ENCODING);
-
-    resp
-}
-
-async fn root(State(dir): AppState, encoding: Encoding, if_none_match: IfNoneMatch) -> Response {
-    dir.get_response("index.html".to_owned(), encoding, if_none_match)
-        .unwrap_or_else(|| not_found(dir, encoding))
+async fn root(state: AppState, encoding: Encoding, if_none_match: IfNoneMatch) -> Response {
+    let path = Path("index.html".to_owned());
+    static_file(state, path, encoding, if_none_match).await
 }
 
 async fn static_file(
@@ -487,6 +489,6 @@ async fn static_file(
     encoding: Encoding,
     if_none_match: IfNoneMatch,
 ) -> Response {
-    dir.get_response(path, encoding, if_none_match)
-        .unwrap_or_else(|| not_found(dir, encoding))
+    dir.get_file(path, encoding, if_none_match)
+        .unwrap_or_else(|| dir.get_status(StatusCode::NOT_FOUND, encoding))
 }
