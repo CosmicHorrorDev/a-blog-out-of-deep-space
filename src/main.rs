@@ -173,7 +173,6 @@ type AppState = State<ServedDir>;
 /// which is a very nice property to have because fetching is user-controlled behavior while we can
 /// keep writing exclusively to server-controlled behavior
 // TODO: maybe switch the key to a (path, content type)?
-// TODO: switch back to a rwlock. The write lock time should be really short (mem swap) and rare
 #[derive(Clone)]
 struct ServedDir(Arc<DashMap<String, ServedFile>>);
 
@@ -234,36 +233,18 @@ impl ServedDir {
 
     fn get_file(
         &self,
-        path: String,
-        encoding: Encoding,
-        if_none_match: IfNoneMatch,
-    ) -> Option<Response> {
-        // guard against getting status code pages. use `.get_status(...)` for that
-        if let Some(prefix) = path.strip_suffix(".html") {
-            if prefix.len() == 3 && prefix.chars().all(|c| c.is_ascii_digit()) {
-                return None;
-            }
-        }
-
-        self.get_file_directly(path, encoding, if_none_match)
-    }
-
-    fn get_status(&self, status: StatusCode, encoding: Encoding) -> Response {
-        let mut resp = self
-            .get_file_directly(format!("{}.html", status.as_u16()), encoding, None.into())
-            .unwrap_or_else(|| Response::new(Body::from(status.to_string())));
-        *resp.status_mut() = status;
-        // it's an error page, so we don't know what it's really supposed to be
-        resp.headers_mut().remove(header::ACCEPT_ENCODING);
-        resp
-    }
-
-    fn get_file_directly(
-        &self,
         mut path: String,
         encoding: Encoding,
         if_none_match: IfNoneMatch,
     ) -> Option<Response> {
+        // guard against getting status code pages. use `.get_status(...)` for that
+        if path
+            .strip_suffix(".html")
+            .is_some_and(|prefix| prefix.parse::<StatusCode>().is_ok())
+        {
+            return None;
+        }
+
         // Implicitly tack on `/index.html` when missing
         let is_known_file = path
             .rsplit_once('.')
@@ -276,8 +257,27 @@ impl ServedDir {
             path.push_str("index.html");
         }
 
+        self.get_file_directly(&path, encoding, if_none_match)
+    }
+
+    fn get_status(&self, status: StatusCode, encoding: Encoding) -> Response {
+        let mut resp = self
+            .get_file_directly(&format!("{}.html", status.as_u16()), encoding, None.into())
+            .unwrap_or_else(|| Response::new(Body::from(status.to_string())));
+        *resp.status_mut() = status;
+        // it's an error page, so we don't know what it's really supposed to be
+        resp.headers_mut().remove(header::ACCEPT_ENCODING);
+        resp
+    }
+
+    fn get_file_directly(
+        &self,
+        path: &str,
+        encoding: Encoding,
+        if_none_match: IfNoneMatch,
+    ) -> Option<Response> {
         self.0
-            .get(&path)
+            .get(path)
             .map(|file| file.to_response(encoding, if_none_match))
     }
 }
@@ -425,11 +425,8 @@ fn br_compress(bytes: &[u8]) -> Vec<u8> {
 
 // TODO: camino for utf8 paths?
 // TODO: log if we get requests from user-agents we don't like
-// TODO: ai-robots.txt and detect crawlers that don't respect the block
-// TODO: https://github.com/ai-robots-txt/ai.robots.txt
 // TODO: allllll the middleware
 // TODO: .env
-// TODO: disallow the 404.html path
 // TODO: strip exif data off of images?
 #[tokio::main]
 async fn main() {
@@ -442,8 +439,7 @@ async fn main() {
     // `axum` (at the time of writing) doesn't support passing state into the function for
     // `HandleError`, so instead we capture it in a closure here
     let dir2 = served_dir.clone();
-    let middleware_error_w_state =
-        async |err: BoxError| -> Response { handle_middleware_error(dir2, err).await };
+    let middleware_error_w_state = async |err: BoxError| handle_middleware_error(dir2, err).await;
 
     let app = Router::new()
         .route("/", get(root))
