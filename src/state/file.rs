@@ -1,19 +1,20 @@
-use crate::extract::{Encoding, IfNoneMatch};
+use crate::extract::Encoding;
 
 use axum::{
     body::{Body, Bytes},
     http::{HeaderValue, StatusCode, header, response},
     response::Response,
 };
+use axum_extra::headers::{ETag, HeaderMapExt, IfNoneMatch};
 
 pub struct ServedFile {
-    pub e_tag: HeaderValue,
+    pub e_tag: ETag,
     pub ty: ContentType,
     pub file: File,
 }
 
 impl ServedFile {
-    pub fn to_response(&self, encoding: Encoding, if_none_match: IfNoneMatch) -> Response {
+    pub fn to_response(&self, encoding: Encoding, if_none_match: Option<IfNoneMatch>) -> Response {
         const SERVER: HeaderValue = HeaderValue::from_static(concat!(
             "a-blog-out-of-deep-space ",
             env!("CARGO_PKG_VERSION")
@@ -29,14 +30,17 @@ impl ServedFile {
                 HeaderValue::from_static("max-age=300"),
             );
 
-        match if_none_match.0 {
+        match if_none_match {
             // Handle e-tag revalidation
-            Some(client_tag) if client_tag == self.e_tag => builder
+            Some(client_tag) if client_tag.precondition_passes(&self.e_tag) => builder
                 .status(StatusCode::NOT_MODIFIED)
                 .body(Body::empty())
                 .unwrap(),
             _ => {
-                builder = builder.header(header::ETAG, self.e_tag.clone());
+                builder
+                    .headers_mut()
+                    .unwrap()
+                    .typed_insert(self.e_tag.clone());
 
                 match &self.file {
                     File::Data(data_file) => builder.body(data_file.to_owned().into()).unwrap(),

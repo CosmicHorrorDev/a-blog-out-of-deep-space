@@ -1,13 +1,14 @@
 use std::{fs, path::PathBuf, sync::Arc, time::Instant};
 
 use super::file::{ContentType, File, ServedFile};
-use crate::extract::{Encoding, IfNoneMatch};
+use crate::extract::Encoding;
 
 use axum::{
     body::Body,
     http::{StatusCode, header},
     response::Response,
 };
+use axum_extra::headers::IfNoneMatch;
 use dashmap::DashMap;
 
 /// An in-memory map automatically synced from a filesystem directory through a notification
@@ -53,9 +54,7 @@ impl ServedDir {
                     let hash = XxHash64::oneshot(ARBITRARY_SEED, &contents);
                     // format as a strong e-tag as we're constructing it off the bytes themselves
                     let value = format!("\"{hash:x}\"");
-                    value
-                        .parse()
-                        .expect("quotes and 0-9a-f are all valid header contents")
+                    value.parse().expect("the format is a valid e-tag")
                 };
 
                 let file = if ty.is_compressible() {
@@ -79,7 +78,7 @@ impl ServedDir {
         &self,
         mut path: String,
         encoding: Encoding,
-        if_none_match: IfNoneMatch,
+        if_none_match: Option<IfNoneMatch>,
     ) -> Option<Response> {
         // guard against getting status code pages. use `.get_status(...)` for that
         if path
@@ -106,7 +105,7 @@ impl ServedDir {
 
     pub fn get_status(&self, status: StatusCode, encoding: Encoding) -> Response {
         let mut resp = self
-            .get_file_directly(&format!("{}.html", status.as_u16()), encoding, None.into())
+            .get_file_directly(&format!("{}.html", status.as_u16()), encoding, None)
             .unwrap_or_else(|| Response::new(Body::from(status.to_string())));
         *resp.status_mut() = status;
         // it's an error page, so we don't know what it's really supposed to be
@@ -118,7 +117,7 @@ impl ServedDir {
         &self,
         path: &str,
         encoding: Encoding,
-        if_none_match: IfNoneMatch,
+        if_none_match: Option<IfNoneMatch>,
     ) -> Option<Response> {
         self.0
             .get(path)

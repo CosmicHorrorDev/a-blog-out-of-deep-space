@@ -70,31 +70,3 @@ where
         Ok(encoding)
     }
 }
-
-#[derive(Default)]
-pub struct IfNoneMatch(pub Option<String>);
-
-impl<S> FromRequestParts<S> for IfNoneMatch
-where
-    S: Send + Sync,
-{
-    type Rejection = Infallible;
-
-    async fn from_request_parts(
-        parts: &mut request::Parts,
-        _: &S,
-    ) -> Result<Self, Self::Rejection> {
-        let maybe_tag = parts
-            .headers
-            .get(header::IF_NONE_MATCH)
-            .and_then(|tag| tag.to_str().ok())
-            .map(ToOwned::to_owned);
-        Ok(Self(maybe_tag))
-    }
-}
-
-impl From<Option<String>> for IfNoneMatch {
-    fn from(maybe_tag: Option<String>) -> Self {
-        Self(maybe_tag)
-    }
-}
