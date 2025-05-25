@@ -1,6 +1,6 @@
-use std::{fs, path::PathBuf, sync::Arc, time::Instant};
+use std::{path::PathBuf, sync::Arc, time::Instant};
 
-use super::file::{ContentType, File, ServedFile};
+use super::file::{ContentType, ServedFile};
 use crate::extract::Encoding;
 
 use axum::{
@@ -23,7 +23,6 @@ pub struct ServedDir(Arc<DashMap<String, ServedFile>>);
 
 impl ServedDir {
     pub fn load(dir_path: PathBuf) -> Self {
-        use twox_hash::XxHash64;
         use walkdir::WalkDir;
 
         let start = Instant::now();
@@ -35,6 +34,7 @@ impl ServedDir {
                 let entry = res.ok()?;
                 let path = entry.path();
 
+                let served_file = ServedFile::load(&path)?;
                 let rel_path = path
                     .strip_prefix(&dir_path)
                     .unwrap()
@@ -42,29 +42,6 @@ impl ServedDir {
                     .map(|comp| comp.as_os_str().to_str().unwrap())
                     .collect::<Vec<_>>()
                     .join("/");
-
-                // TODO: split logic out into ServedFile from path helper
-
-                let ext = path.extension()?.to_str()?;
-                let ty = ContentType::from_file_ext(ext)?;
-
-                let contents = fs::read(path).ok()?;
-                let e_tag = {
-                    const ARBITRARY_SEED: u64 = 0xc0ffee;
-                    let hash = XxHash64::oneshot(ARBITRARY_SEED, &contents);
-                    // format as a strong e-tag as we're constructing it off the bytes themselves
-                    let value = format!("\"{hash:x}\"");
-                    value.parse().expect("the format is a valid e-tag")
-                };
-
-                let file = if ty.is_compressible() {
-                    let contents = String::from_utf8(contents).ok()?;
-                    File::Text(contents.into())
-                } else {
-                    File::Data(contents.into())
-                };
-
-                let served_file = ServedFile { e_tag, ty, file };
 
                 println!("- Loaded {} in {:0.2?}", rel_path, start.elapsed());
                 Some((rel_path, served_file))

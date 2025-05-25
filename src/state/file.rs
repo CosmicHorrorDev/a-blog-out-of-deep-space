@@ -1,3 +1,5 @@
+use std::{fs, path::Path};
+
 use crate::extract::Encoding;
 
 use axum::{
@@ -6,17 +8,41 @@ use axum::{
     response::Response,
 };
 use axum_extra::headers::{ETag, HeaderMapExt, IfNoneMatch};
+use twox_hash::XxHash64;
 
 pub struct ServedFile {
-    pub e_tag: ETag,
-    pub ty: ContentType,
-    pub file: File,
+    e_tag: ETag,
+    ty: ContentType,
+    file: File,
 }
 
 impl ServedFile {
+    pub fn load(path: &Path) -> Option<Self> {
+        let ext = path.extension()?.to_str()?;
+        let ty = ContentType::from_file_ext(ext)?;
+
+        let contents = fs::read(path).ok()?;
+        let e_tag = {
+            const ARBITRARY_SEED: u64 = 0xc0ffee;
+            let hash = XxHash64::oneshot(ARBITRARY_SEED, &contents);
+            // format as a strong e-tag as we're constructing it off the bytes themselves
+            let value = format!("\"{hash:x}\"");
+            value.parse().expect("the format is a valid e-tag")
+        };
+
+        let file = if ty.is_compressible() {
+            let contents = String::from_utf8(contents).ok()?;
+            File::Text(contents.into())
+        } else {
+            File::Data(contents.into())
+        };
+
+        Some(Self { e_tag, ty, file })
+    }
+
     pub fn to_response(&self, encoding: Encoding, if_none_match: Option<IfNoneMatch>) -> Response {
         const SERVER: HeaderValue = HeaderValue::from_static(concat!(
-            "a-blog-out-of-deep-space ",
+            "a-blog-out-of-deep-space/",
             env!("CARGO_PKG_VERSION")
         ));
         let mut temp = SERVER.clone();
@@ -52,13 +78,13 @@ impl ServedFile {
 }
 
 // TODO: switch this to automaitcally try compressing and bail out if the size isn't better
-pub enum File {
+enum File {
     Data(DataFile),
     Text(TextFile),
 }
 
 #[derive(Clone)]
-pub struct DataFile(Bytes);
+struct DataFile(Bytes);
 
 impl From<DataFile> for Body {
     fn from(file: DataFile) -> Self {
@@ -73,7 +99,7 @@ impl From<Vec<u8>> for DataFile {
 }
 
 // NOTE: UTF-8 is validated before construction
-pub struct TextFile {
+struct TextFile {
     gz_compressed: Bytes,
     br_compressed: Bytes,
     contents: Bytes,
