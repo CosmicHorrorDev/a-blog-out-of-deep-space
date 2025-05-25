@@ -1,4 +1,4 @@
-use std::{fs, path::Path};
+use std::{fs, path::Path, time::Duration};
 
 use crate::extract::Encoding;
 
@@ -7,8 +7,21 @@ use axum::{
     http::{HeaderValue, StatusCode, header, response},
     response::Response,
 };
-use axum_extra::headers::{ETag, HeaderMapExt, IfNoneMatch};
+use axum_extra::headers::{self, CacheControl, ETag, Header, HeaderMapExt, IfNoneMatch};
+use mime::Mime;
 use twox_hash::XxHash64;
+
+pub trait ResponseBuilderExt {
+    fn typed_header(self, header: impl Header) -> Self;
+}
+
+impl ResponseBuilderExt for response::Builder {
+    fn typed_header(mut self, header: impl Header) -> Self {
+        self.headers_mut()
+            .map(|header_map| header_map.typed_insert(header));
+        self
+    }
+}
 
 pub struct ServedFile {
     e_tag: ETag,
@@ -45,16 +58,11 @@ impl ServedFile {
             "a-blog-out-of-deep-space/",
             env!("CARGO_PKG_VERSION")
         ));
-        let mut temp = SERVER.clone();
-        temp.set_sensitive(true);
         let mut builder = Response::builder()
             .header(header::SERVER, SERVER)
-            .header(header::CONTENT_TYPE, self.ty.into_value())
+            .typed_header(headers::ContentType::from(self.ty.into_mime()))
             // TODO: set this based on content type?
-            .header(
-                header::CACHE_CONTROL,
-                HeaderValue::from_static("max-age=300"),
-            );
+            .typed_header(CacheControl::new().with_max_age(Duration::from_secs(300)));
 
         match if_none_match {
             // Handle e-tag revalidation
@@ -63,10 +71,7 @@ impl ServedFile {
                 .body(Body::empty())
                 .unwrap(),
             _ => {
-                builder
-                    .headers_mut()
-                    .unwrap()
-                    .typed_insert(self.e_tag.clone());
+                builder = builder.typed_header(self.e_tag.clone());
 
                 match &self.file {
                     File::Data(data_file) => builder.body(data_file.to_owned().into()).unwrap(),
@@ -187,30 +192,28 @@ pub enum ContentType {
     Txt,
     Woff,
     Woff2,
-    Ico,
     Png,
 }
 
 impl ContentType {
-    const fn into_value(self) -> HeaderValue {
+    const fn into_mime(self) -> Mime {
         match self {
-            ContentType::Html => HeaderValue::from_static("text/html; charset=utf-8"),
-            ContentType::Js => HeaderValue::from_static("application/javascript; charset=UTF-8"),
-            ContentType::Svg => HeaderValue::from_static("image/svg+xml"),
-            ContentType::Css => HeaderValue::from_static("text/css; charset=utf-8"),
-            ContentType::Xml => HeaderValue::from_static("application/xml; charset=UTF-8"),
-            ContentType::Txt => HeaderValue::from_static("text/plain"),
-            ContentType::Woff => HeaderValue::from_static("font/woff"),
-            ContentType::Woff2 => HeaderValue::from_static("font/woff2"),
-            ContentType::Ico => HeaderValue::from_static("image/vnd.microsoft.icon"),
-            ContentType::Png => HeaderValue::from_static("image/png"),
+            ContentType::Html => mime::TEXT_HTML_UTF_8,
+            ContentType::Js => mime::APPLICATION_JAVASCRIPT_UTF_8,
+            ContentType::Svg => mime::IMAGE_SVG,
+            ContentType::Css => mime::TEXT_CSS_UTF_8,
+            ContentType::Xml => mime::TEXT_XML,
+            ContentType::Txt => mime::TEXT_PLAIN,
+            ContentType::Woff => mime::FONT_WOFF,
+            ContentType::Woff2 => mime::FONT_WOFF2,
+            ContentType::Png => mime::IMAGE_PNG,
         }
     }
 
-    pub fn is_compressible(self) -> bool {
+    fn is_compressible(self) -> bool {
         match self {
             Self::Html | Self::Js | Self::Svg | Self::Css | Self::Xml | Self::Txt => true,
-            Self::Woff | Self::Woff2 | Self::Ico | Self::Png => false,
+            Self::Woff | Self::Woff2 | Self::Png => false,
         }
     }
 
@@ -224,7 +227,6 @@ impl ContentType {
             "txt" => Self::Txt,
             "woff" => Self::Woff,
             "woff2" => Self::Woff2,
-            "ico" => Self::Ico,
             "png" => Self::Png,
             _ => return None,
         };

@@ -160,6 +160,7 @@ dependencies = [
  "brotli",
  "dashmap",
  "flate2",
+ "mime",
  "tokio",
  "tower",
  "twox-hash",
