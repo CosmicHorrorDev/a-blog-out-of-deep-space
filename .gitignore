@@ -1,1 +1,5 @@
+# cargo build artifacts
 /target
+# insta pending snapshots
+*.snap.new
+*.pending-snap
