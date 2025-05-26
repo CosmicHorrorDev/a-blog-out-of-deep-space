@@ -1,7 +1,7 @@
 use std::{convert::Infallible, str::FromStr};
 
 use axum::{
-    extract::FromRequestParts,
+    extract::{FromRequestParts, OptionalFromRequestParts},
     http::{HeaderValue, header, request},
 };
 
@@ -68,5 +68,28 @@ where
 
         let encoding = from_req_parts(&*parts).unwrap_or_default();
         Ok(encoding)
+    }
+}
+
+// TODO: like github issue about why we use this instead of the default typed header
+// `headers::IfNoneMatch` impl
+pub struct IfNoneMatch(pub String);
+
+impl<S> OptionalFromRequestParts<S> for IfNoneMatch
+where
+    S: Send + Sync,
+{
+    type Rejection = Infallible;
+
+    async fn from_request_parts(
+        parts: &mut request::Parts,
+        _: &S,
+    ) -> Result<Option<Self>, Self::Rejection> {
+        let maybe_tag = parts
+            .headers
+            .get(header::IF_NONE_MATCH)
+            .and_then(|tag| tag.to_str().ok())
+            .map(|tag| Self(tag.to_owned()));
+        Ok(maybe_tag)
     }
 }

@@ -1,12 +1,7 @@
 use std::{env, net::Ipv4Addr};
 
+use blog_server::{ServedDir, router};
 use tokio::net::TcpListener;
-
-mod extract;
-mod router;
-mod state;
-
-use state::ServedDir;
 
 // TODO: camino for utf8 paths?
 // TODO: log if we get requests from user-agents we don't like
@@ -21,7 +16,7 @@ async fn main() {
     println!("Loading {dir_to_serve}...");
     let dir = ServedDir::load(dir_to_serve.into());
 
-    let app = router::router(dir);
+    let app = router(dir);
     let listener = TcpListener::bind((Ipv4Addr::UNSPECIFIED, 8080))
         .await
         .unwrap();

@@ -25,6 +25,11 @@ features = ["full"]
 version = "0.5.2"
 features = ["load-shed", "timeout"]
 
+[dev-dependencies.tower]
+version = "0.5.2"
+features = ["util"]
+
+
 [profile.deploy]
 inherits = "release"
 lto = true

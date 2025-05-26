@@ -1,14 +1,13 @@
 use std::{path::PathBuf, sync::Arc, time::Instant};
 
 use super::file::{ContentType, ServedFile};
-use crate::extract::Encoding;
+use crate::extract::{Encoding, IfNoneMatch};
 
 use axum::{
     body::Body,
     http::{StatusCode, header},
     response::Response,
 };
-use axum_extra::headers::IfNoneMatch;
 use dashmap::DashMap;
 
 /// An in-memory map automatically synced from a filesystem directory through a notification

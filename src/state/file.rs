@@ -1,13 +1,13 @@
 use std::{fs, path::Path, time::Duration};
 
-use crate::extract::Encoding;
+use crate::extract::{Encoding, IfNoneMatch};
 
 use axum::{
     body::{Body, Bytes},
     http::{HeaderValue, StatusCode, header, response},
     response::Response,
 };
-use axum_extra::headers::{self, CacheControl, ETag, Header, HeaderMapExt, IfNoneMatch};
+use axum_extra::headers::{self, CacheControl, Header, HeaderMapExt};
 use mime::Mime;
 use twox_hash::XxHash64;
 
@@ -24,7 +24,7 @@ impl ResponseBuilderExt for response::Builder {
 }
 
 pub struct ServedFile {
-    e_tag: ETag,
+    e_tag: HeaderValue,
     ty: ContentType,
     file: File,
 }
@@ -66,12 +66,12 @@ impl ServedFile {
 
         match if_none_match {
             // Handle e-tag revalidation
-            Some(client_tag) if client_tag.precondition_passes(&self.e_tag) => builder
+            Some(client_tag) if client_tag.0 == self.e_tag => builder
                 .status(StatusCode::NOT_MODIFIED)
                 .body(Body::empty())
                 .unwrap(),
             _ => {
-                builder = builder.typed_header(self.e_tag.clone());
+                builder = builder.header(header::ETAG, self.e_tag.clone());
 
                 match &self.file {
                     File::Data(data_file) => builder.body(data_file.to_owned().into()).unwrap(),

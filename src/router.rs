@@ -1,7 +1,7 @@
 use std::time::Duration;
 
 use crate::{
-    extract::Encoding,
+    extract::{Encoding, IfNoneMatch},
     state::{AppState, ServedDir},
 };
 
@@ -13,7 +13,6 @@ use axum::{
     response::Response,
     routing::get,
 };
-use axum_extra::{TypedHeader, headers::IfNoneMatch};
 use tower::ServiceBuilder;
 
 pub fn router(dir: ServedDir) -> Router {
@@ -48,11 +47,7 @@ async fn handle_middleware_error(dir: ServedDir, err: BoxError) -> Response {
     dir.get_status(status, Encoding::default())
 }
 
-async fn root(
-    state: AppState,
-    encoding: Encoding,
-    if_none_match: Option<TypedHeader<IfNoneMatch>>,
-) -> Response {
+async fn root(state: AppState, encoding: Encoding, if_none_match: Option<IfNoneMatch>) -> Response {
     let path = Path("index.html".to_owned());
     static_file(state, path, encoding, if_none_match).await
 }
@@ -61,9 +56,8 @@ async fn static_file(
     State(dir): AppState,
     Path(path): Path<String>,
     encoding: Encoding,
-    if_none_match: Option<TypedHeader<IfNoneMatch>>,
+    if_none_match: Option<IfNoneMatch>,
 ) -> Response {
-    let if_none_match = if_none_match.map(|header| header.0);
     dir.get_file(path, encoding, if_none_match)
         .unwrap_or_else(|| dir.get_status(StatusCode::NOT_FOUND, encoding))
 }
