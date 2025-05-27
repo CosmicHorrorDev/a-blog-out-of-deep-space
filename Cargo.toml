@@ -21,13 +21,17 @@ features = ["full"]
 version = "0.5.2"
 features = ["load-shed", "timeout"]
 
-[dev-dependencies]
-insta = "1.43.1"
+[dev-dependencies.insta]
+version = "1.43.1"
+features = ["ron"]
+
+[dev-dependencies.serde]
+version = "1.0.219"
+features = ["derive"]
 
 [dev-dependencies.tower]
 version = "0.5.2"
 features = ["util"]
-
 
 [profile.deploy]
 inherits = "release"
