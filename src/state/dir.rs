@@ -86,6 +86,7 @@ impl ServedDir {
         *resp.status_mut() = status;
         // it's an error page, so we don't know what it's really supposed to be
         resp.headers_mut().remove(header::ACCEPT_ENCODING);
+        resp.headers_mut().remove(header::CACHE_CONTROL);
         resp
     }
 

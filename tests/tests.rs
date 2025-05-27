@@ -3,7 +3,7 @@ use std::{array, collections::BTreeMap, path::Path, sync::LazyLock};
 use axum::{
     body::Body,
     extract::Request,
-    http::{HeaderValue, StatusCode, header},
+    http::{HeaderValue, header},
     response::Response,
 };
 use blog_server::{ServedDir, router};
@@ -131,7 +131,6 @@ async fn status_pages_not_found() {
     SnapTextResp(
       status: "Not Found",
       headers: {
-        "cache-control": "max-age=300",
         "content-length": "64",
         "content-type": "text/html; charset=utf-8",
         "etag": "\"b421c5014bc729c2\"",
