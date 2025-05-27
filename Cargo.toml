@@ -12,10 +12,6 @@ mime = "0.3.17"
 twox-hash = "2.1.0"
 walkdir = "2.5.0"
 
-[dependencies.axum-extra]
-version = "0.10.1"
-features = ["typed-header"]
-
 [dependencies.tokio]
 version = "1.44.2"
 # TODO: slim down features

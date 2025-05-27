@@ -1,4 +1,4 @@
-use std::{fs, path::Path, time::Duration};
+use std::{fs, path::Path};
 
 use crate::extract::{Encoding, IfNoneMatch};
 
@@ -7,21 +7,7 @@ use axum::{
     http::{HeaderValue, StatusCode, header, response},
     response::Response,
 };
-use axum_extra::headers::{self, CacheControl, Header, HeaderMapExt};
-use mime::Mime;
 use twox_hash::XxHash64;
-
-pub trait ResponseBuilderExt {
-    fn typed_header(self, header: impl Header) -> Self;
-}
-
-impl ResponseBuilderExt for response::Builder {
-    fn typed_header(mut self, header: impl Header) -> Self {
-        self.headers_mut()
-            .map(|header_map| header_map.typed_insert(header));
-        self
-    }
-}
 
 pub struct ServedFile {
     e_tag: HeaderValue,
@@ -60,9 +46,9 @@ impl ServedFile {
         ));
         let mut builder = Response::builder()
             .header(header::SERVER, SERVER)
-            .typed_header(headers::ContentType::from(self.ty.into_mime()))
+            .header(header::CONTENT_TYPE, self.ty.into_header_value())
             // TODO: set this based on content type?
-            .typed_header(CacheControl::new().with_max_age(Duration::from_secs(300)));
+            .header(header::CACHE_CONTROL, "max-age=300");
 
         match if_none_match {
             // Handle e-tag revalidation
@@ -196,17 +182,17 @@ pub enum ContentType {
 }
 
 impl ContentType {
-    const fn into_mime(self) -> Mime {
+    const fn into_header_value(self) -> HeaderValue {
         match self {
-            ContentType::Html => mime::TEXT_HTML_UTF_8,
-            ContentType::Js => mime::APPLICATION_JAVASCRIPT_UTF_8,
-            ContentType::Svg => mime::IMAGE_SVG,
-            ContentType::Css => mime::TEXT_CSS_UTF_8,
-            ContentType::Xml => mime::TEXT_XML,
-            ContentType::Txt => mime::TEXT_PLAIN,
-            ContentType::Woff => mime::FONT_WOFF,
-            ContentType::Woff2 => mime::FONT_WOFF2,
-            ContentType::Png => mime::IMAGE_PNG,
+            ContentType::Html => HeaderValue::from_static("text/html; charset=utf-8"),
+            ContentType::Js => HeaderValue::from_static("application/javascript; charset=utf-8"),
+            ContentType::Svg => HeaderValue::from_static("image/svg+xml"),
+            ContentType::Css => HeaderValue::from_static("text/css; charset=utf-8"),
+            ContentType::Xml => HeaderValue::from_static("application/xml"),
+            ContentType::Txt => HeaderValue::from_static("text/plain"),
+            ContentType::Woff => HeaderValue::from_static("font/woff"),
+            ContentType::Woff2 => HeaderValue::from_static("font/woff2"),
+            ContentType::Png => HeaderValue::from_static("image/png"),
         }
     }
 
