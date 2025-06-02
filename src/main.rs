@@ -4,9 +4,6 @@ use blog_server::{ServedDir, router};
 use tokio::net::TcpListener;
 
 // TODO: camino for utf8 paths?
-// TODO: log if we get requests from user-agents we don't like
-// TODO: allllll the middleware
-// TODO: .env
 // TODO: strip exif data off of images?
 #[tokio::main]
 async fn main() {

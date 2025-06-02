@@ -2,6 +2,8 @@
 name = "blog-server"
 version = "0.1.0"
 edition = "2024"
+publish = false
+# TODO: what license to pick?
 
 [dependencies]
 axum = "0.8.4"
@@ -9,13 +11,31 @@ brotli = "8.0.0"
 dashmap = "6.1.0"
 flate2 = "1.1.1"
 mime = "0.3.17"
+pin-project-lite = "0.2.16"
 twox-hash = "2.1.0"
 walkdir = "2.5.0"
 
+[dependencies.bincode]
+version = "2.0.1"
+features = ["serde"]
+
+[dependencies.flume]
+version = "0.11.1"
+default-features = false
+features = ["async"]
+
+[dependencies.futures-util]
+version = "0.3.31"
+default-features = false
+features = ["std"]
+
+[dependencies.serde]
+version = "1.0.219"
+features = ["derive"]
+
 [dependencies.tokio]
 version = "1.44.2"
-# TODO: slim down features
-features = ["full"]
+features = ["fs", "macros", "rt-multi-thread"]
 
 [dependencies.tower]
 version = "0.5.2"
@@ -24,10 +44,6 @@ features = ["load-shed", "timeout"]
 [dev-dependencies.insta]
 version = "1.43.1"
 features = ["ron"]
-
-[dev-dependencies.serde]
-version = "1.0.219"
-features = ["derive"]
 
 [dev-dependencies.tower]
 version = "0.5.2"

@@ -3,7 +3,7 @@ use std::{array, collections::BTreeMap, path::Path, sync::LazyLock};
 use axum::{
     body::Body,
     extract::Request,
-    http::{HeaderValue, header},
+    http::{HeaderValue, StatusCode, header},
     response::Response,
 };
 use blog_server::{ServedDir, router};
@@ -123,7 +123,7 @@ async fn index_html_normalized() {
 ///
 /// 408.html is not found depsite existing in the root of the repo
 #[tokio::test]
-async fn status_pages_not_found() {
+async fn status_code_page_not_found() {
     let req = get_req("/408.html");
     let resp = call_test_server(req).await;
     let snap_resp = SnapTextResp::new(resp).await;
@@ -139,6 +139,20 @@ async fn status_pages_not_found() {
       body: "<!doctype html>\n<html lang=\"en\">\n<h1>404 NOT FOUND</h1>\n</html>\n",
     )
     "#);
+}
+
+#[tokio::test]
+async fn status_code_page_can_be_compressed() {
+    let mut req = get_req("/not-found");
+    req.headers_mut().insert(
+        header::ACCEPT_ENCODING,
+        HeaderValue::from_static("deflate, br"),
+    );
+    let resp = call_test_server(req).await;
+    let resp_headers = resp.headers();
+    assert_eq!(resp.status(), StatusCode::NOT_FOUND);
+    assert_eq!(resp_headers.get(header::CONTENT_ENCODING).unwrap(), "br");
+    assert!(!resp_headers.contains_key(header::ACCEPT_ENCODING));
 }
 
 /// server supports etag based revalidation to support client http caches

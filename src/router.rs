@@ -2,6 +2,7 @@ use std::time::Duration;
 
 use crate::{
     extract::{Encoding, IfNoneMatch},
+    middleware::RecorderLayer,
     state::{AppState, ServedDir},
 };
 
@@ -22,6 +23,10 @@ pub fn router(dir: ServedDir) -> Router {
     let middleware_error_w_state = async |err| handle_middleware_error(dir2, err).await;
 
     Router::new()
+        // defer all routing to the handler itself. has to be done with two routes because
+        // wildcards don't match empty segments
+        // > Note that `/{*key}` doesn’t match empty segments. Thus:
+        // > - `/{*key}` doesn’t match `/` but does match `/a`, `/a/`, etc.
         .route("/", get(root))
         .route("/{*path}", get(static_file))
         .layer(
@@ -31,7 +36,8 @@ pub fn router(dir: ServedDir) -> Router {
                 .layer(HandleErrorLayer::new(middleware_error_w_state))
                 // TODO: allow customizing this value
                 .timeout(Duration::from_secs(60))
-                .load_shed(),
+                .load_shed()
+                .layer(RecorderLayer::spawn()),
         )
         .with_state(dir)
 }

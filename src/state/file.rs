@@ -4,7 +4,7 @@ use crate::extract::{Encoding, IfNoneMatch};
 
 use axum::{
     body::{Body, Bytes},
-    http::{HeaderValue, StatusCode, header, response},
+    http::{HeaderMap, HeaderValue, StatusCode, header},
     response::Response,
 };
 use twox_hash::XxHash64;
@@ -50,20 +50,28 @@ impl ServedFile {
             // TODO: set this based on content type?
             .header(header::CACHE_CONTROL, "max-age=300");
 
-        match if_none_match {
-            // Handle e-tag revalidation
-            Some(client_tag) if client_tag.0 == self.e_tag => builder
+        // handle etag content revalidation
+        if if_none_match.is_some_and(|client_tag| client_tag.0 == self.e_tag) {
+            builder
                 .status(StatusCode::NOT_MODIFIED)
                 .body(Body::empty())
-                .unwrap(),
-            _ => {
-                builder = builder.header(header::ETAG, self.e_tag.clone());
-
-                match &self.file {
-                    File::Data(data_file) => builder.body(data_file.to_owned().into()).unwrap(),
-                    File::Text(text_file) => text_file.finish_response(builder, encoding),
+                .unwrap()
+        } else {
+            let bytes = match &self.file {
+                File::Data(data_file) => data_file.0.clone(),
+                File::Text(text_file) => {
+                    text_file.setup_headers(builder.headers_mut().unwrap(), encoding);
+                    text_file.select_body_bytes(encoding)
                 }
-            }
+            };
+
+            builder = builder
+                .header(header::ETAG, self.e_tag.clone())
+                // `axum` automatically sets the content length for us, but we explicitly set it
+                // here, so that our custom middleware can see it
+                .header(header::CONTENT_LENGTH, bytes.len());
+
+            builder.body(bytes.into()).unwrap()
         }
     }
 }
@@ -97,27 +105,23 @@ struct TextFile {
 }
 
 impl TextFile {
-    fn finish_response(&self, mut builder: response::Builder, encoding: Encoding) -> Response {
-        // Include the encodings we support for this entity no matter what
-        builder = builder.header(header::ACCEPT_ENCODING, Encoding::ALL_ENCODINGS);
+    fn setup_headers(&self, headers: &mut HeaderMap, encoding: Encoding) {
+        // include the encodings we support for this entity no matter what
+        headers.insert(header::ACCEPT_ENCODING, Encoding::ALL_ENCODINGS);
 
-        // Setup headers for our content encoding
+        // setup headers for our content encoding
         if let Some(content_encoding) = encoding.into_content_encoding_value() {
-            builder = builder
-                .header(header::VARY, header::ACCEPT_ENCODING)
-                .header(header::CONTENT_ENCODING, content_encoding)
+            headers.insert(header::VARY, header::ACCEPT_ENCODING.into());
+            headers.insert(header::CONTENT_ENCODING, content_encoding);
         }
-
-        builder.body(self.select_body(encoding)).unwrap()
     }
 
-    fn select_body(&self, encoding: Encoding) -> Body {
+    fn select_body_bytes(&self, encoding: Encoding) -> Bytes {
         match encoding {
             Encoding::Gzip => self.gz_compressed.clone(),
             Encoding::Brotli => self.br_compressed.clone(),
             Encoding::Identity => self.contents.clone(),
         }
-        .into()
     }
 }
 
