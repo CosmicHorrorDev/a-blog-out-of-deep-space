@@ -7,7 +7,7 @@ publish = false
 
 [dependencies]
 axum = "0.8.4"
-brotli = "8.0.0"
+brotli = "8.0.1"
 dashmap = "6.1.0"
 flate2 = "1.1.1"
 mime = "0.3.17"
