@@ -1,0 +1,34 @@
+on:
+  push:
+    branches:
+    - main
+  pull_request:
+
+name: CI
+
+env:
+  CARGO_TERM_COLOR: always
+  RUSTFLAGS: "--deny warnings"
+
+jobs:
+  full:
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout
+        uses: actions/checkout@v4
+      - name: install rust toolchain
+        run: |
+          rustup toolchain install stable --profile minimal --component rustfmt
+          rustup default ${{ matrix.rust }}
+      # super cheap, so no need to wait for caching
+      - name: run `cargo fmt`
+        run: |
+          cargo fmt -- --check
+      - name: build cache
+        uses: Swatinem/rust-cache@v2
+      - name: check
+        run: |
+          cargo check
+      - name: test suite
+        run: |
+          cargo test
