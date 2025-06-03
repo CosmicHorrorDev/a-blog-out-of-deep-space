@@ -33,13 +33,13 @@ impl FromStr for Encoding {
             "identity" => Self::Identity,
             "gzip" => Self::Gzip,
             "br" => Self::Brotli,
+            // TODO: handle wildcard encoding
             _ => return Err(()),
         };
         Ok(encoding)
     }
 }
 
-// TODO: need to handle wildcard encoding and rank by quality
 impl<S> FromRequestParts<S> for Encoding
 where
     S: Send + Sync,
@@ -55,11 +55,12 @@ where
             let accept_encoding = accept_encoding.to_str().ok()?;
             accept_encoding
                 .split(',')
-                .map(|chunk| {
+                .filter_map(|chunk| {
                     let trimmed = chunk.trim();
                     match trimmed.split_once(';') {
-                        Some((encoding, quality)) => todo!(),
-                        None => trimmed,
+                        // TODO: properly handle non-default encoding qualities
+                        Some((_encoding, _quality)) => None,
+                        None => Some(trimmed),
                     }
                 })
                 .filter_map(|encoding| encoding.parse().ok())
