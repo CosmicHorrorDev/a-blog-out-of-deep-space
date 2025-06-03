@@ -8,7 +8,7 @@ name: CI
 
 env:
   CARGO_TERM_COLOR: always
-  RUSTFLAGS: "--deny warnings"
+  RUSTFLAGS: "-C debuginfo=0 --deny warnings"
 
 jobs:
   full:
