@@ -1,4 +1,4 @@
-use std::{path::PathBuf, sync::Arc, time::Instant};
+use std::{collections::HashMap, path::PathBuf, sync::Arc, time::Instant};
 
 use super::file::{ContentType, ServedFile};
 use crate::extract::{Encoding, IfNoneMatch};
@@ -8,7 +8,6 @@ use axum::{
     http::{StatusCode, header},
     response::Response,
 };
-use dashmap::DashMap;
 
 /// An in-memory map automatically synced from a filesystem directory through a notification
 /// watcher
@@ -18,14 +17,14 @@ use dashmap::DashMap;
 /// keep writing exclusively to server-controlled behavior
 // TODO: maybe switch the key to a (path, content type)?
 #[derive(Clone)]
-pub struct ServedDir(Arc<DashMap<String, ServedFile>>);
+pub struct ServedDir(Arc<HashMap<String, ServedFile>>);
 
 impl ServedDir {
     pub fn load(dir_path: PathBuf) -> Self {
         use walkdir::WalkDir;
 
         let start = Instant::now();
-        let inner: DashMap<_, _> = WalkDir::new(&dir_path)
+        let inner: HashMap<_, _> = WalkDir::new(&dir_path)
             .into_iter()
             .filter_map(|res| {
                 let start = Instant::now();

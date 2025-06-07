@@ -5,15 +5,23 @@ edition = "2024"
 publish = false
 # TODO: what license to pick?
 
+[profile.deploy]
+inherits = "release"
+lto = true
+codegen-units = 1
+
 [dependencies]
-axum = "0.8.4"
 brotli = "8.0.1"
-dashmap = "6.1.0"
 flate2 = "1.1.1"
 mime = "0.3.17"
 pin-project-lite = "0.2.16"
 twox-hash = "2.1.0"
 walkdir = "2.5.0"
+
+[dependencies.axum]
+version = "0.8.4"
+default-features = false
+features = ["http1", "tokio"]
 
 [dependencies.bincode]
 version = "2.0.1"
@@ -48,8 +56,3 @@ features = ["ron"]
 [dev-dependencies.tower]
 version = "0.5.2"
 features = ["util"]
-
-[profile.deploy]
-inherits = "release"
-lto = true
-codegen-units = 1
