@@ -15,6 +15,7 @@ brotli = "8.0.1"
 flate2 = "1.1.1"
 mime = "0.3.17"
 pin-project-lite = "0.2.16"
+tracing = "0.1.41"
 twox-hash = "2.1.0"
 walkdir = "2.5.0"
 
@@ -22,10 +23,6 @@ walkdir = "2.5.0"
 version = "0.8.4"
 default-features = false
 features = ["http1", "tokio"]
-
-[dependencies.bincode]
-version = "2.0.1"
-features = ["serde"]
 
 [dependencies.flume]
 version = "0.11.1"
@@ -37,10 +34,6 @@ version = "0.3.31"
 default-features = false
 features = ["std"]
 
-[dependencies.serde]
-version = "1.0.219"
-features = ["derive"]
-
 [dependencies.tokio]
 version = "1.45.1"
 features = ["fs", "macros", "rt-multi-thread"]
@@ -49,10 +42,26 @@ features = ["fs", "macros", "rt-multi-thread"]
 version = "0.5.2"
 features = ["load-shed", "timeout"]
 
+[dependencies.tracing-subscriber]
+version = "0.3.19"
+features = ["env-filter"]
+
+[dev-dependencies.divan]
+version = "0.1.21"
+default-features = false
+
 [dev-dependencies.insta]
 version = "1.43.1"
 features = ["ron"]
 
+[dev-dependencies.serde]
+version = "1.0.219"
+features = ["derive"]
+
 [dev-dependencies.tower]
 version = "0.5.2"
 features = ["util"]
+
+[[bench]]
+name = "server"
+harness = false

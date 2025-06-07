@@ -41,11 +41,15 @@ impl ServedDir {
                     .collect::<Vec<_>>()
                     .join("/");
 
-                println!("- Loaded {} in {:0.2?}", rel_path, start.elapsed());
+                tracing::debug!(%rel_path, elapsed = ?start.elapsed(), "Loaded file");
                 Some((rel_path, served_file))
             })
             .collect();
-        println!("Loaded {} files in {:0.2?}", inner.len(), start.elapsed());
+        tracing::info!(
+            num = %inner.len(),
+            elapsed = ?start.elapsed(),
+            "Loaded all files"
+        );
         Self(Arc::new(inner))
     }
 

@@ -11,6 +11,34 @@ use serde::Serialize;
 use tokio::task::JoinSet;
 use tower::{Service, ServiceExt};
 
+#[test]
+fn deving() {
+    let rt = tokio::runtime::Builder::new_current_thread()
+        .enable_time()
+        .build()
+        .unwrap();
+
+    // TODO: get a etag from a resp and setup valid and invalid revalidation reqs, also get a 404
+    let dir = ServedDir::load(Path::new("tests").join("assets").join("site"));
+    let mut app = rt.block_on(async { router(dir) });
+    let reqs = [
+        Request::get("/").body(Body::empty()).unwrap(),
+        Request::get("/index.html").body(Body::empty()).unwrap(),
+        Request::get("/not-found").body(Body::empty()).unwrap(),
+    ];
+
+    rt.block_on(async {
+        for req in reqs {
+            <_ as ServiceExt<Request>>::ready(&mut app)
+                .await
+                .unwrap()
+                .call(req)
+                .await
+                .unwrap();
+        }
+    });
+}
+
 async fn call_test_server(req: Request) -> Response {
     // cache to avoid costly reinitialization
     static DIR: LazyLock<ServedDir> =
@@ -25,11 +53,7 @@ async fn call_test_server(req: Request) -> Response {
 }
 
 fn get_req(path: &str) -> Request {
-    if path.is_empty() {
-        Request::new(Body::empty())
-    } else {
-        Request::get(path).body(Body::empty()).unwrap()
-    }
+    Request::get(path).body(Body::empty()).unwrap()
 }
 
 #[track_caller]
@@ -79,7 +103,7 @@ impl SnapTextResp {
 
 #[tokio::test]
 async fn sanity_root() {
-    let req = get_req("");
+    let req = get_req("/");
     let resp = call_test_server(req).await;
     assert_resp_success(&resp);
     let snap_resp = SnapTextResp::new(resp).await;
@@ -101,7 +125,7 @@ async fn sanity_root() {
 
 #[tokio::test]
 async fn index_html_normalized() {
-    let equiv_paths = &["", "/", "/index.html"];
+    let equiv_paths = &["/", "/index.html"];
     let mut req_set = JoinSet::new();
     for path in equiv_paths {
         req_set.spawn(async move {
