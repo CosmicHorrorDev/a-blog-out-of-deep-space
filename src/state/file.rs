@@ -130,7 +130,7 @@ impl From<String> for TextFile {
         fn check_compression_ratio(source: &[u8], compressed: &[u8]) {
             let ratio = compressed.len() as f32 / source.len() as f32;
             if ratio > 0.9 {
-                println!("- Poor compression ratio: {ratio}");
+                tracing::warn!(%ratio, "Poor compression");
             }
         }
         let gz_compressed: Bytes = gz_compress(contents.as_bytes()).into();

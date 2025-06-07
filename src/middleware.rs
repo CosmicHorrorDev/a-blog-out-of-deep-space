@@ -1,5 +1,4 @@
 use std::{
-    collections::{BTreeMap, HashMap, hash_map},
     convert::Infallible,
     pin::Pin,
     task::{Context, Poll},
@@ -14,10 +13,10 @@ use axum::{
 use flume::{Sender, r#async::RecvStream};
 use futures_util::stream::StreamExt;
 use pin_project_lite::pin_project;
-use serde::Serialize;
 use tower::{Layer, Service};
 
 #[derive(Clone, Debug)]
+#[allow(dead_code)]
 struct ReqMetadata {
     uri: Uri,
     method: Method,
@@ -38,6 +37,7 @@ impl From<&Request> for ReqMetadata {
 }
 
 #[derive(Clone, Debug)]
+#[allow(dead_code)]
 struct RespMetadata {
     status: StatusCode,
     headers: HeaderMap,
@@ -69,96 +69,9 @@ impl RecorderLayer {
     }
 }
 
-#[derive(Debug, Serialize)]
-struct NormEntry {
-    time: SystemTime,
-    duration: Duration,
-    uri: String,
-    method: String,
-    status: u16,
-    req_headers: u64,
-    resp_headers: u64,
-}
-
 async fn recorder_worker(mut recv_stream: RecvStream<'static, RecorderEntry>) {
-    // Normalize headers to a lossy representation where:
-    // - Things are ordered to ensure hashing is stable
-    // - Any entries that are invalid UTF-8 are filtered
-    // - Any header values beyond the first one are ignored
-    fn norm_headers(headers: HeaderMap) -> (u64, BTreeMap<String, String>) {
-        use std::hash::{Hash, Hasher};
-
-        let norm: BTreeMap<_, _> = headers
-            .into_iter()
-            .filter_map(|(maybe_name, val)| {
-                // `maybe_name` will only be `None` when this value is after the first associated with
-                // this name
-                let name = maybe_name?;
-                let val = val.to_str().ok()?;
-                Some((name.as_str().to_owned(), val.to_owned()))
-            })
-            .collect();
-        let mut hasher = twox_hash::XxHash64::with_seed(0xc0ffee);
-        norm.hash(&mut hasher);
-        let hash = hasher.finish();
-        (hash, norm)
-    }
-
-    let mut counter = 0;
-    let mut norm_entries = Vec::new();
-    let mut headers = HashMap::new();
-
     while let Some((time, duration, req, resp)) = recv_stream.next().await {
-        let ReqMetadata {
-            uri,
-            method,
-            headers: req_headers,
-        } = req;
-        let RespMetadata {
-            status,
-            headers: resp_headers,
-        } = resp;
-        let (req_hash, req_headers) = norm_headers(req_headers);
-        let (resp_hash, resp_headers) = norm_headers(resp_headers);
-        let norm_entry = NormEntry {
-            time,
-            duration,
-            uri: uri.to_string(),
-            method: method.as_str().to_owned(),
-            status: status.as_u16(),
-            req_headers: req_hash,
-            resp_headers: resp_hash,
-        };
-        norm_entries.push(norm_entry);
-        if let hash_map::Entry::Vacant(vacant) = headers.entry(req_hash) {
-            vacant.insert(req_headers);
-        }
-        if let hash_map::Entry::Vacant(vacant) = headers.entry(resp_hash) {
-            vacant.insert(resp_headers);
-        }
-
-        // if we have a decent amount of entries then dump them to a file, and reset our recorder
-        // session
-        counter += 1;
-        if counter > 200 {
-            let encoded = bincode::serde::encode_to_vec(
-                (&norm_entries, &headers),
-                bincode::config::standard(),
-            )
-            .unwrap();
-            let timestamp = SystemTime::now()
-                .duration_since(SystemTime::UNIX_EPOCH)
-                .unwrap()
-                .as_secs();
-            let output_path = format!("/tmp/record-{timestamp}.bin");
-            tokio::fs::write(&output_path, &encoded).await.unwrap();
-            println!("Dumped record file {output_path}");
-            counter = 0;
-            norm_entries.clear();
-            headers.clear();
-            // eepy time. work may be lost, but that's the whole point
-            tokio::time::sleep(Duration::from_secs(1)).await;
-        }
+        tracing::trace!(?time, ?duration, ?req, ?resp);
     }
 }
 
