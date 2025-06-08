@@ -40,7 +40,12 @@ pub fn render(bencher: Bencher) {
                     .call(req)
                     .await
                     .unwrap();
-                black_box(resp);
+                let resp = black_box(resp);
+                black_box(
+                    axum::body::to_bytes(resp.into_body(), 1_024 * 1_024)
+                        .await
+                        .unwrap(),
+                );
             }
         });
     });
