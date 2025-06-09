@@ -1,6 +1,6 @@
 use std::{hint::black_box, path::Path, time::Duration};
 
-use axum::{body::Body, extract::Request};
+use axum::{body::Body, extract::Request, http::header};
 use blog_server::{ServedDir, router};
 use divan::{Bencher, Divan, bench};
 use tower::{Service, ServiceExt};
@@ -14,18 +14,19 @@ fn main() {
 }
 
 #[bench]
-pub fn render(bencher: Bencher) {
+pub fn request_variety(bencher: Bencher) {
     let rt = tokio::runtime::Builder::new_current_thread()
         .enable_time()
         .build()
         .unwrap();
 
     let dir = ServedDir::load(Path::new("tests").join("assets").join("site"));
+    // TODO: add etag revalidation?
     // NOTE: internally uses `tokio::spawn`, so must be run from an async context
     let mut app = rt.block_on(async { router(dir) });
     let reqs = [
         Request::get("/"),
-        Request::get("/index.html"),
+        Request::get("/").header(header::ACCEPT_ENCODING, "br"),
         Request::get("/not-found"),
     ]
     .map(|b| b.body(()).unwrap().into_parts().0);
