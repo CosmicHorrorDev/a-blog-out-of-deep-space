@@ -11,34 +11,6 @@ use serde::Serialize;
 use tokio::task::JoinSet;
 use tower::{Service, ServiceExt};
 
-#[test]
-fn deving() {
-    let rt = tokio::runtime::Builder::new_current_thread()
-        .enable_time()
-        .build()
-        .unwrap();
-
-    // TODO: get a etag from a resp and setup valid and invalid revalidation reqs, also get a 404
-    let dir = ServedDir::load(Path::new("tests").join("assets").join("site"));
-    let mut app = rt.block_on(async { router(dir) });
-    let reqs = [
-        Request::get("/").body(Body::empty()).unwrap(),
-        Request::get("/index.html").body(Body::empty()).unwrap(),
-        Request::get("/not-found").body(Body::empty()).unwrap(),
-    ];
-
-    rt.block_on(async {
-        for req in reqs {
-            <_ as ServiceExt<Request>>::ready(&mut app)
-                .await
-                .unwrap()
-                .call(req)
-                .await
-                .unwrap();
-        }
-    });
-}
-
 async fn call_test_server(req: Request) -> Response {
     // cache to avoid costly reinitialization
     static DIR: LazyLock<ServedDir> =
