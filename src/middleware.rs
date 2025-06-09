@@ -15,6 +15,8 @@ use futures_util::stream::StreamExt;
 use pin_project_lite::pin_project;
 use tower::{Layer, Service};
 
+use crate::util::disp;
+
 #[derive(Clone, Debug)]
 #[allow(dead_code)]
 struct ReqMetadata {
@@ -71,7 +73,7 @@ impl RecorderLayer {
 
 async fn recorder_worker(mut recv_stream: RecvStream<'static, RecorderEntry>) {
     while let Some((time, duration, req, resp)) = recv_stream.next().await {
-        tracing::trace!(?time, ?duration, ?req, ?resp);
+        tracing::trace!(time = %disp::Time(time), duration = %disp::Duration(duration), ?req, ?resp);
     }
 }
 
