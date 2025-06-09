@@ -12,7 +12,7 @@ codegen-units = 1
 
 [dependencies]
 brotli = "8.0.1"
-flate2 = "1.1.1"
+flate2 = "1.1.2"
 mime = "0.3.17"
 pin-project-lite = "0.2.16"
 tracing = "0.1.41"
