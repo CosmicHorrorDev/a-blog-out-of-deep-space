@@ -1,7 +1,13 @@
-use std::{collections::HashMap, path::PathBuf, sync::Arc, time::Instant};
+use std::{collections::HashMap, mem, path::PathBuf, sync::Arc, time::Instant};
 
 use super::file::{ContentType, ServedFile};
-use crate::extract::{Encoding, IfNoneMatch};
+use crate::{
+    extract::{Encoding, IfNoneMatch},
+    util::{
+        TotalSize,
+        disp::{self, HumanBytes},
+    },
+};
 
 use axum::{
     body::Body,
@@ -18,6 +24,13 @@ use axum::{
 // TODO: maybe switch the key to a (path, content type)?
 #[derive(Clone)]
 pub struct ServedDir(Arc<HashMap<String, ServedFile>>);
+
+impl TotalSize for ServedDir {
+    fn total_size(&self) -> usize {
+        mem::size_of::<Arc<HashMap<String, ServedFile>>>()
+            + <Arc<HashMap<String, ServedFile>> as TotalSize>::total_size(&self.0)
+    }
+}
 
 impl ServedDir {
     pub fn load(dir_path: PathBuf) -> Self {
@@ -41,13 +54,14 @@ impl ServedDir {
                     .collect::<Vec<_>>()
                     .join("/");
 
-                tracing::debug!(%rel_path, elapsed = ?start.elapsed(), "Loaded file");
+                tracing::debug!(%rel_path, elapsed = %disp::Duration(start.elapsed()), "Loaded file");
                 Some((rel_path, served_file))
             })
             .collect();
         tracing::info!(
-            num = %inner.len(),
-            elapsed = ?start.elapsed(),
+            num = inner.len(),
+            elapsed = %disp::Duration(start.elapsed()),
+            total_size = %HumanBytes(inner.total_size()),
             "Loaded all files"
         );
         Self(Arc::new(inner))

@@ -1,6 +1,9 @@
-use std::{fs, path::Path};
+use std::{fs, mem, path::Path};
 
-use crate::extract::{Encoding, IfNoneMatch};
+use crate::{
+    extract::{Encoding, IfNoneMatch},
+    util::TotalSize,
+};
 
 use axum::{
     body::{Body, Bytes},
@@ -13,6 +16,13 @@ pub struct ServedFile {
     e_tag: HeaderValue,
     ty: ContentType,
     file: File,
+}
+
+impl TotalSize for ServedFile {
+    fn total_size(&self) -> usize {
+        let ServedFile { e_tag, ty, file } = self;
+        mem::size_of::<Self>() + e_tag.total_size() + ty.total_size() + file.total_size()
+    }
 }
 
 impl ServedFile {
@@ -82,8 +92,24 @@ enum File {
     Text(TextFile),
 }
 
+impl TotalSize for File {
+    fn total_size(&self) -> usize {
+        mem::size_of::<Self>()
+            + match self {
+                Self::Data(d) => d.total_size(),
+                Self::Text(t) => t.total_size(),
+            }
+    }
+}
+
 #[derive(Clone)]
 struct DataFile(Bytes);
+
+impl TotalSize for DataFile {
+    fn total_size(&self) -> usize {
+        self.0.total_size()
+    }
+}
 
 impl From<DataFile> for Body {
     fn from(file: DataFile) -> Self {
@@ -102,6 +128,20 @@ struct TextFile {
     gz_compressed: Bytes,
     br_compressed: Bytes,
     contents: Bytes,
+}
+
+impl TotalSize for TextFile {
+    fn total_size(&self) -> usize {
+        let Self {
+            gz_compressed,
+            br_compressed,
+            contents,
+        } = self;
+        mem::size_of::<Self>()
+            + gz_compressed.total_size()
+            + br_compressed.total_size()
+            + contents.total_size()
+    }
 }
 
 impl TextFile {
@@ -130,7 +170,7 @@ impl From<String> for TextFile {
         fn check_compression_ratio(source: &[u8], compressed: &[u8]) {
             let ratio = compressed.len() as f32 / source.len() as f32;
             if ratio > 0.9 {
-                tracing::warn!(%ratio, "Poor compression");
+                tracing::warn!(ratio, "Poor compression");
             }
         }
         let gz_compressed: Bytes = gz_compress(contents.as_bytes()).into();
@@ -183,6 +223,12 @@ pub enum ContentType {
     Woff,
     Woff2,
     Png,
+}
+
+impl TotalSize for ContentType {
+    fn total_size(&self) -> usize {
+        std::mem::size_of::<Self>()
+    }
 }
 
 impl ContentType {
