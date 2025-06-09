@@ -16,7 +16,7 @@ flate2 = "1.1.1"
 mime = "0.3.17"
 pin-project-lite = "0.2.16"
 tracing = "0.1.41"
-twox-hash = "2.1.0"
+twox-hash = "2.1.1"
 walkdir = "2.5.0"
 
 [dependencies.axum]
