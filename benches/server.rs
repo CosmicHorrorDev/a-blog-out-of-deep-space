@@ -1,7 +1,7 @@
 use std::{hint::black_box, path::Path, time::Duration};
 
 use axum::{body::Body, extract::Request, http::header};
-use blog_server::{ServedDir, router};
+use blog_server::router;
 use divan::{Bencher, Divan, bench};
 use tower::{Service, ServiceExt};
 
@@ -20,7 +20,7 @@ pub fn request_variety(bencher: Bencher) {
         .build()
         .unwrap();
 
-    let dir = ServedDir::load(Path::new("tests").join("assets").join("site"));
+    let dir = Path::new("tests").join("assets").join("site");
     // TODO: add etag revalidation?
     // NOTE: internally uses `tokio::spawn`, so must be run from an async context
     let mut app = rt.block_on(async { router(dir) });
