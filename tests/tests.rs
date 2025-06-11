@@ -1,22 +1,23 @@
 use std::{array, collections::BTreeMap, path::Path, sync::LazyLock};
 
 use axum::{
+    Router,
     body::Body,
     extract::Request,
     http::{HeaderValue, StatusCode, header},
     response::Response,
 };
-use blog_server::{ServedDir, router};
+use blog_server::router;
 use serde::Serialize;
 use tokio::task::JoinSet;
 use tower::{Service, ServiceExt};
 
 async fn call_test_server(req: Request) -> Response {
     // cache to avoid costly reinitialization
-    static DIR: LazyLock<ServedDir> =
-        LazyLock::new(|| ServedDir::load(Path::new("tests").join("assets").join("site")));
-    let mut app = router(DIR.clone());
-    <_ as ServiceExt<Request>>::ready(&mut app)
+    static ROUTER: LazyLock<Router> =
+        LazyLock::new(|| router(Path::new("tests").join("assets").join("site")));
+    let mut router = ROUTER.clone();
+    <_ as ServiceExt<Request>>::ready(&mut router)
         .await
         .unwrap()
         .call(req)

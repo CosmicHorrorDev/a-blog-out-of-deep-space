@@ -12,6 +12,7 @@ use axum::{
 };
 use twox_hash::XxHash64;
 
+#[derive(Clone)]
 pub struct ServedFile {
     e_tag: HeaderValue,
     ty: ContentType,
@@ -87,6 +88,7 @@ impl ServedFile {
 }
 
 // TODO: switch this to automaitcally try compressing and bail out if the size isn't better
+#[derive(Clone)]
 enum File {
     Data(DataFile),
     Text(TextFile),
@@ -124,6 +126,7 @@ impl From<Vec<u8>> for DataFile {
 }
 
 // NOTE: UTF-8 is validated before construction
+#[derive(Clone)]
 struct TextFile {
     gz_compressed: Bytes,
     br_compressed: Bytes,
