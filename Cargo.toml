@@ -10,6 +10,10 @@ inherits = "release"
 lto = true
 codegen-units = 1
 
+[[bench]]
+name = "router"
+harness = false
+
 [dependencies]
 brotli = "8.0.1"
 flate2 = "1.1.2"
@@ -61,7 +65,3 @@ features = ["derive"]
 [dev-dependencies.tower]
 version = "0.5.2"
 features = ["util"]
-
-[[bench]]
-name = "server"
-harness = false
