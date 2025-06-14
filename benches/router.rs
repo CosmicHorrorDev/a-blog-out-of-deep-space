@@ -14,7 +14,7 @@ use tower::{Service, ServiceExt};
 fn main() {
     // Run registered benchmarks
     Divan::default()
-        .min_time(Duration::from_secs(3))
+        .min_time(Duration::from_millis(500))
         .config_with_args()
         .main();
 }
