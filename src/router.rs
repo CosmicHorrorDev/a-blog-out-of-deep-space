@@ -9,7 +9,7 @@ use crate::{
     extract::{Encoding, IfNoneMatch},
     file::ServedFile,
     middleware::RecorderLayer,
-    util::disp,
+    util::{TotalSize, disp},
 };
 
 use axum::{
@@ -28,6 +28,8 @@ pub fn router(dir: PathBuf) -> Router {
     let mut not_found_page: Option<Arc<_>> = None;
     let mut status_pages = BTreeMap::new();
     let mut router = Router::new();
+    let mut total_size = 0;
+    let total_start = Instant::now();
 
     for path in WalkDir::new(&dir).into_iter().filter_map(|res| {
         let entry = res.ok()?;
@@ -40,6 +42,8 @@ pub fn router(dir: PathBuf) -> Router {
             // TODO: log
             continue;
         };
+        let in_memory_size = served_file.total_size();
+        total_size += in_memory_size;
 
         let rel_path = path
             .strip_prefix(&dir)
@@ -75,8 +79,19 @@ pub fn router(dir: PathBuf) -> Router {
             router = router.route(&rel_path, get_file);
         }
 
-        tracing::debug!(%rel_path, elapsed = %disp::Duration(start.elapsed()), "Loaded file");
+        tracing::debug!(
+            %rel_path,
+            elapsed = %disp::Duration(start.elapsed()),
+            in_memory_size = %disp::HumanBytes(in_memory_size),
+            "Loaded file",
+        );
     }
+
+    tracing::info!(
+        elapsed = %disp::Duration(total_start.elapsed()),
+        in_memory_size = %disp::HumanBytes(total_size),
+        "Loaded directory",
+    );
 
     // `axum` (at the time of writing) doesn't support passing state into the function for
     // `HandleError`, so instead we capture it in a closure here
@@ -109,6 +124,7 @@ async fn handle_middleware_error(
     } else if err.is::<tower::timeout::error::Elapsed>() {
         StatusCode::REQUEST_TIMEOUT
     } else {
+        tracing::warn!(%err, "Unhandled middleware error");
         StatusCode::INTERNAL_SERVER_ERROR
     };
     status_code_page(status_pages.get(&status), status, encoding)
