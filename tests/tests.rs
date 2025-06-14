@@ -98,7 +98,7 @@ async fn sanity_root() {
 
 #[tokio::test]
 async fn index_html_normalized() {
-    let equiv_paths = &["/", "/index.html"];
+    let equiv_paths = &["/posts", "/posts/", "/posts/index.html"];
     let mut req_set = JoinSet::new();
     for path in equiv_paths {
         req_set.spawn(async move {
