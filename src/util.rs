@@ -1,4 +1,4 @@
-use std::{collections::HashMap, mem::size_of, sync::Arc};
+use std::{mem::size_of, sync::Arc};
 
 use axum::{body::Bytes, http::HeaderValue};
 
@@ -9,27 +9,6 @@ pub trait TotalSize {
 impl<T: TotalSize> TotalSize for Arc<T> {
     fn total_size(&self) -> usize {
         size_of::<Self>() + T::total_size(&self)
-    }
-}
-
-impl<K, V> TotalSize for HashMap<K, V>
-where
-    K: TotalSize,
-    V: TotalSize,
-{
-    fn total_size(&self) -> usize {
-        size_of::<Self>()
-            + (self.capacity() - self.len()) * (size_of::<K>() + size_of::<V>())
-            + self
-                .iter()
-                .map(|(k, v)| k.total_size() + v.total_size())
-                .sum::<usize>()
-    }
-}
-
-impl TotalSize for String {
-    fn total_size(&self) -> usize {
-        size_of::<Self>() + self.capacity()
     }
 }
 
