@@ -22,7 +22,7 @@ pub struct ServedFile {
 impl TotalSize for ServedFile {
     fn total_size(&self) -> usize {
         let ServedFile { e_tag, ty, file } = self;
-        mem::size_of::<Self>() + e_tag.total_size() + ty.total_size() + file.total_size()
+        e_tag.total_size() + ty.total_size() + file.total_size()
     }
 }
 
@@ -96,7 +96,12 @@ enum File {
 
 impl TotalSize for File {
     fn total_size(&self) -> usize {
-        mem::size_of::<Self>()
+        let shallow_size = mem::size_of::<Self>()
+            - match self {
+                Self::Data(_) => mem::size_of::<DataFile>(),
+                Self::Text(_) => mem::size_of::<TextFile>(),
+            };
+        shallow_size
             + match self {
                 Self::Data(d) => d.total_size(),
                 Self::Text(t) => t.total_size(),
@@ -140,10 +145,7 @@ impl TotalSize for TextFile {
             br_compressed,
             contents,
         } = self;
-        mem::size_of::<Self>()
-            + gz_compressed.total_size()
-            + br_compressed.total_size()
-            + contents.total_size()
+        gz_compressed.total_size() + br_compressed.total_size() + contents.total_size()
     }
 }
 
