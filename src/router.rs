@@ -24,7 +24,6 @@ use tower::ServiceBuilder;
 use walkdir::WalkDir;
 
 // TODO: return an error in here instead of filtering out any bad entries?
-// TODO: refactor all of this to be less gross
 pub fn router(dir: PathBuf) -> Router {
     let mut not_found_page: Option<Arc<_>> = None;
     let mut status_pages = BTreeMap::new();
@@ -59,41 +58,21 @@ pub fn router(dir: PathBuf) -> Router {
             }
             status_pages.insert(status_code, served_file);
         } else {
+            // path must start with a `/`
             let rel_path = format!("/{rel_path}");
             let served_file = Arc::new(served_file);
+            let get_file = get(async |encoding, if_none_match| {
+                serve_file(encoding, if_none_match, served_file).await
+            });
             // add equivalent routes on `/index.html` pages
-            if rel_path == "index.html" {
-                let served_file = Arc::clone(&served_file);
-                router = router.route(
-                    "/",
-                    get(async |encoding, if_none_match| {
-                        serve_file(encoding, if_none_match, served_file).await
-                    }),
-                );
-            } else if rel_path.ends_with("/index.html") {
-                if rel_path != "/index.html" {
-                    let served_file = Arc::clone(&served_file);
-                    router = router.route(
-                        rel_path.strip_suffix("/index.html").unwrap(),
-                        get(async |encoding, if_none_match| {
-                            serve_file(encoding, if_none_match, served_file).await
-                        }),
-                    );
+            if let Some(norm_path) = rel_path.strip_suffix("/index.html") {
+                // allow for no trailing slash as long as it leaves _something_ for the route path
+                if !norm_path.is_empty() {
+                    router = router.route(norm_path, get_file.clone());
                 }
-                let served_file = Arc::clone(&served_file);
-                router = router.route(
-                    rel_path.strip_suffix("index.html").unwrap(),
-                    get(async |encoding, if_none_match| {
-                        serve_file(encoding, if_none_match, served_file).await
-                    }),
-                );
+                router = router.route(&format!("{norm_path}/"), get_file.clone());
             }
-            router = router.route(
-                &rel_path,
-                get(async |encoding, if_none_match| {
-                    serve_file(encoding, if_none_match, served_file).await
-                }),
-            );
+            router = router.route(&rel_path, get_file);
         }
 
         tracing::debug!(%rel_path, elapsed = %disp::Duration(start.elapsed()), "Loaded file");
@@ -151,6 +130,7 @@ fn status_code_page(page: Option<&ServedFile>, status: StatusCode, encoding: Enc
 async fn serve_file(
     encoding: Encoding,
     if_none_match: Option<IfNoneMatch>,
+    // TODO: could clone and consume the file directly instead of wrapping it in a `Arc`
     file: Arc<ServedFile>,
 ) -> Response {
     file.to_response(encoding, if_none_match)
