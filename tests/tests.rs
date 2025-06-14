@@ -86,12 +86,12 @@ async fn sanity_root() {
       headers: {
         "accept-encoding": "gzip, br",
         "cache-control": "max-age=300",
-        "content-length": "59",
+        "content-length": "654",
         "content-type": "text/html; charset=utf-8",
-        "etag": "\"60366ae3584de167\"",
+        "etag": "\"e2e7b1b46a3923e\"",
         "server": "a-blog-out-of-deep-space/0.1.0",
       },
-      body: "<!doctype html>\n<html lang=\"en\">\n<h1>The base</h1>\n</html>\n",
+      body: "<!doctype html>\n<html lang=\"en\">\n<head>\n<link rel=\"icon\" type=\"image/png\" href=\"/img/favicon.png\" />\n<meta name=\"author\" content=\"Cosmic Horror\" />\n</head>\n\n<body>\n\n<h1>The base</h1>\n\n<p>Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod\ntempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam,\nquis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo\nconsequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum\ndolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident,\nsunt in culpa qui officia deserunt mollit anim id est laborum.</p>\n\n</body>\n</html>\n",
     )
     "#);
 }
@@ -128,12 +128,12 @@ async fn status_code_page_not_found() {
     SnapTextResp(
       status: "Not Found",
       headers: {
-        "content-length": "64",
+        "content-length": "519",
         "content-type": "text/html; charset=utf-8",
-        "etag": "\"b421c5014bc729c2\"",
+        "etag": "\"7e03829c89f8eb3f\"",
         "server": "a-blog-out-of-deep-space/0.1.0",
       },
-      body: "<!doctype html>\n<html lang=\"en\">\n<h1>404 NOT FOUND</h1>\n</html>\n",
+      body: "<!doctype html>\n<html lang=\"en\">\n<h1>404 NOT FOUND</h1>\n\n<p>Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod\ntempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam,\nquis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo\nconsequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum\ndolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident,\nsunt in culpa qui officia deserunt mollit anim id est laborum.</p>\n\n</html>\n",
     )
     "#);
 }
