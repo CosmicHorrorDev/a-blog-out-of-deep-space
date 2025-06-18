@@ -52,7 +52,8 @@ impl ServedFile {
 
     pub fn to_response(&self, encoding: Encoding, if_none_match: Option<IfNoneMatch>) -> Response {
         const SERVER: HeaderValue = HeaderValue::from_static(concat!(
-            "a-blog-out-of-deep-space/",
+            env!("CARGO_PKG_NAME"),
+            " ",
             env!("CARGO_PKG_VERSION")
         ));
         let mut builder = Response::builder()

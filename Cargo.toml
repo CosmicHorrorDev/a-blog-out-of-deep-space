@@ -1,5 +1,5 @@
 [package]
-name = "blog-server"
+name = "a-blog-out-of-deep-space"
 version = "0.1.0"
 edition = "2024"
 publish = false

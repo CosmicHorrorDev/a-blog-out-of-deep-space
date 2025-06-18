@@ -1,12 +1,12 @@
 use std::{hint::black_box, path::Path, time::Duration};
 
+use a_blog_out_of_deep_space::router;
 use axum::{
     body::Body,
     extract::Request,
     http::{header, request},
     response::Response,
 };
-use blog_server::router;
 use divan::{Bencher, Divan, bench};
 use tokio::runtime::Runtime;
 use tower::{Service, ServiceExt};

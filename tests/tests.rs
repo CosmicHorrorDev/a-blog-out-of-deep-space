@@ -1,5 +1,6 @@
 use std::{array, collections::BTreeMap, path::Path, sync::LazyLock};
 
+use a_blog_out_of_deep_space::router;
 use axum::{
     Router,
     body::Body,
@@ -7,7 +8,6 @@ use axum::{
     http::{HeaderValue, StatusCode, header},
     response::Response,
 };
-use blog_server::router;
 use serde::Serialize;
 use tokio::task::JoinSet;
 use tower::{Service, ServiceExt};
@@ -89,7 +89,7 @@ async fn sanity_root() {
         "content-length": "654",
         "content-type": "text/html; charset=utf-8",
         "etag": "\"e2e7b1b46a3923e\"",
-        "server": "a-blog-out-of-deep-space/0.1.0",
+        "server": "a-blog-out-of-deep-space 0.1.0",
       },
       body: "<!doctype html>\n<html lang=\"en\">\n<head>\n<link rel=\"icon\" type=\"image/png\" href=\"/img/favicon.png\" />\n<meta name=\"author\" content=\"Cosmic Horror\" />\n</head>\n\n<body>\n\n<h1>The base</h1>\n\n<p>Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod\ntempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam,\nquis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo\nconsequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum\ndolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident,\nsunt in culpa qui officia deserunt mollit anim id est laborum.</p>\n\n</body>\n</html>\n",
     )
@@ -131,7 +131,7 @@ async fn status_code_page_not_found() {
         "content-length": "519",
         "content-type": "text/html; charset=utf-8",
         "etag": "\"7e03829c89f8eb3f\"",
-        "server": "a-blog-out-of-deep-space/0.1.0",
+        "server": "a-blog-out-of-deep-space 0.1.0",
       },
       body: "<!doctype html>\n<html lang=\"en\">\n<h1>404 NOT FOUND</h1>\n\n<p>Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod\ntempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam,\nquis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo\nconsequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum\ndolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident,\nsunt in culpa qui officia deserunt mollit anim id est laborum.</p>\n\n</html>\n",
     )
@@ -178,7 +178,7 @@ async fn revalidation() {
         "cache-control": "max-age=300",
         "content-length": "0",
         "content-type": "image/png",
-        "server": "a-blog-out-of-deep-space/0.1.0",
+        "server": "a-blog-out-of-deep-space 0.1.0",
       },
     )
     "#);

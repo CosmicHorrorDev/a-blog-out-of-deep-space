@@ -1,6 +1,6 @@
 use std::{env, net::Ipv4Addr};
 
-use blog_server::router;
+use a_blog_out_of_deep_space::router;
 use tokio::net::TcpListener;
 use tracing_subscriber::{EnvFilter, filter::LevelFilter, fmt, prelude::*};
 
