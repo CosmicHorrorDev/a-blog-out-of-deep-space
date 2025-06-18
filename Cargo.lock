@@ -3,6 +3,28 @@
 version = 4
 
 [[package]]
+name = "a-blog-out-of-deep-space"
+version = "0.1.0"
+dependencies = [
+ "axum",
+ "brotli",
+ "divan",
+ "flate2",
+ "flume",
+ "futures-util",
+ "insta",
+ "mime",
+ "pin-project-lite",
+ "serde",
+ "tokio",
+ "tower",
+ "tracing",
+ "tracing-subscriber",
+ "twox-hash",
+ "walkdir",
+]
+
+[[package]]
 name = "addr2line"
 version = "0.24.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -133,28 +155,6 @@ name = "bitflags"
 version = "2.9.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1b8e56985ec62d17e9c1001dc89c88ecd7dc08e47eba5ec7c29c7b5eeecde967"
-
-[[package]]
-name = "blog-server"
-version = "0.1.0"
-dependencies = [
- "axum",
- "brotli",
- "divan",
- "flate2",
- "flume",
- "futures-util",
- "insta",
- "mime",
- "pin-project-lite",
- "serde",
- "tokio",
- "tower",
- "tracing",
- "tracing-subscriber",
- "twox-hash",
- "walkdir",
-]
 
 [[package]]
 name = "brotli"
