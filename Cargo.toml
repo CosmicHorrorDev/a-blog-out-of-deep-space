@@ -46,6 +46,9 @@ features = ["fs", "macros", "rt-multi-thread"]
 version = "0.5.2"
 features = ["load-shed", "timeout"]
 
+[dev-dependencies]
+insta = "1.43.1"
+
 [dependencies.tracing-subscriber]
 version = "0.3.19"
 features = ["env-filter"]
@@ -53,14 +56,6 @@ features = ["env-filter"]
 [dev-dependencies.divan]
 version = "0.1.21"
 default-features = false
-
-[dev-dependencies.insta]
-version = "1.43.1"
-features = ["ron"]
-
-[dev-dependencies.serde]
-version = "1.0.219"
-features = ["derive"]
 
 [dev-dependencies.tower]
 version = "0.5.2"

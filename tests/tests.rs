@@ -1,4 +1,4 @@
-use std::{array, collections::BTreeMap, path::Path, sync::LazyLock};
+use std::{array, collections::BTreeMap, fmt, path::Path, sync::LazyLock};
 
 use a_blog_out_of_deep_space::router;
 use axum::{
@@ -8,7 +8,6 @@ use axum::{
     http::{HeaderValue, StatusCode, header},
     response::Response,
 };
-use serde::Serialize;
 use tokio::task::JoinSet;
 use tower::{Service, ServiceExt};
 
@@ -49,17 +48,38 @@ async fn body_string(body: Body) -> Option<String> {
     String::from_utf8(bytes.to_vec()).ok()
 }
 
-#[derive(Serialize)]
 struct SnapTextResp {
-    status: String,
+    status: StatusCode,
     headers: BTreeMap<String, String>,
-    #[serde(skip_serializing_if = "String::is_empty")]
     body: String,
+}
+
+impl fmt::Display for SnapTextResp {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let Self {
+            status,
+            headers,
+            body,
+        } = self;
+        writeln!(
+            f,
+            "{} - {}",
+            status.as_u16(),
+            status.canonical_reason().unwrap()
+        )?;
+        for (name, value) in headers {
+            writeln!(f, "{name:>16}: {value}")?;
+        }
+        if !body.is_empty() {
+            writeln!(f, "---\n{body}")?;
+        }
+        Ok(())
+    }
 }
 
 impl SnapTextResp {
     async fn new(resp: Response) -> Self {
-        let status = resp.status().canonical_reason().unwrap().to_owned();
+        let status = resp.status();
         let headers = resp
             .headers()
             .iter()
@@ -80,20 +100,39 @@ async fn sanity_root() {
     let resp = call_test_server(req).await;
     assert_resp_success(&resp);
     let snap_resp = SnapTextResp::new(resp).await;
-    insta::assert_ron_snapshot!(snap_resp, @r#"
-    SnapTextResp(
-      status: "OK",
-      headers: {
-        "accept-encoding": "gzip, br",
-        "cache-control": "max-age=300",
-        "content-length": "654",
-        "content-type": "text/html; charset=utf-8",
-        "etag": "\"e2e7b1b46a3923e\"",
-        "server": "a-blog-out-of-deep-space 0.1.0",
-      },
-      body: "<!doctype html>\n<html lang=\"en\">\n<head>\n<link rel=\"icon\" type=\"image/png\" href=\"/img/favicon.png\" />\n<meta name=\"author\" content=\"Cosmic Horror\" />\n</head>\n\n<body>\n\n<h1>The base</h1>\n\n<p>Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod\ntempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam,\nquis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo\nconsequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum\ndolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident,\nsunt in culpa qui officia deserunt mollit anim id est laborum.</p>\n\n</body>\n</html>\n",
-    )
-    "#);
+    insta::assert_snapshot!(
+        snap_resp,
+        @r#"
+        200 - OK
+         accept-encoding: gzip, br
+           cache-control: max-age=300
+          content-length: 654
+            content-type: text/html; charset=utf-8
+                    etag: "e2e7b1b46a3923e"
+                  server: a-blog-out-of-deep-space 0.1.0
+        ---
+        <!doctype html>
+        <html lang="en">
+        <head>
+        <link rel="icon" type="image/png" href="/img/favicon.png" />
+        <meta name="author" content="Cosmic Horror" />
+        </head>
+
+        <body>
+
+        <h1>The base</h1>
+
+        <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod
+        tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam,
+        quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo
+        consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum
+        dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident,
+        sunt in culpa qui officia deserunt mollit anim id est laborum.</p>
+
+        </body>
+        </html>
+        "#,
+    );
 }
 
 #[tokio::test]
@@ -124,18 +163,29 @@ async fn status_code_page_not_found() {
     let req = get_req("/408.html");
     let resp = call_test_server(req).await;
     let snap_resp = SnapTextResp::new(resp).await;
-    insta::assert_ron_snapshot!(snap_resp, @r#"
-    SnapTextResp(
-      status: "Not Found",
-      headers: {
-        "content-length": "519",
-        "content-type": "text/html; charset=utf-8",
-        "etag": "\"7e03829c89f8eb3f\"",
-        "server": "a-blog-out-of-deep-space 0.1.0",
-      },
-      body: "<!doctype html>\n<html lang=\"en\">\n<h1>404 NOT FOUND</h1>\n\n<p>Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod\ntempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam,\nquis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo\nconsequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum\ndolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident,\nsunt in culpa qui officia deserunt mollit anim id est laborum.</p>\n\n</html>\n",
-    )
-    "#);
+    insta::assert_snapshot!(
+        snap_resp,
+        @r#"
+        404 - Not Found
+          content-length: 519
+            content-type: text/html; charset=utf-8
+                    etag: "7e03829c89f8eb3f"
+                  server: a-blog-out-of-deep-space 0.1.0
+        ---
+        <!doctype html>
+        <html lang="en">
+        <h1>404 NOT FOUND</h1>
+
+        <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod
+        tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam,
+        quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo
+        consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum
+        dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident,
+        sunt in culpa qui officia deserunt mollit anim id est laborum.</p>
+
+        </html>
+        "#,
+    );
 }
 
 #[tokio::test]
@@ -171,17 +221,16 @@ async fn revalidation() {
     req.headers_mut().insert(header::IF_NONE_MATCH, etag);
     let resp = call_test_server(req).await;
     let snap_resp = SnapTextResp::new(resp).await;
-    insta::assert_ron_snapshot!(snap_resp, @r#"
-    SnapTextResp(
-      status: "Not Modified",
-      headers: {
-        "cache-control": "max-age=300",
-        "content-length": "0",
-        "content-type": "image/png",
-        "server": "a-blog-out-of-deep-space 0.1.0",
-      },
-    )
-    "#);
+    insta::assert_snapshot!(
+        snap_resp,
+        @r"
+        304 - Not Modified
+           cache-control: max-age=300
+          content-length: 0
+            content-type: image/png
+                  server: a-blog-out-of-deep-space 0.1.0
+        ",
+    );
 }
 
 /// server supports serving compressed content through proactive-content negotiation
