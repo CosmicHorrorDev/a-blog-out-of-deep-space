@@ -29,6 +29,9 @@ jobs:
       - name: check
         run: |
           cargo check
+      - name: clippy
+        run: |
+          cargo clippy
       - name: test suite
         run: |
           cargo test
