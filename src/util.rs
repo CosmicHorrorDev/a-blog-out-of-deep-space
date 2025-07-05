@@ -8,7 +8,7 @@ pub trait TotalSize {
 
 impl<T: TotalSize> TotalSize for Arc<T> {
     fn total_size(&self) -> usize {
-        size_of::<Self>() + T::total_size(&self)
+        size_of::<Self>() + T::total_size(self)
     }
 }
 
