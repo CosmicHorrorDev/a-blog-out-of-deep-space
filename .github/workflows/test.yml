@@ -32,4 +32,4 @@ jobs:
       - name: test suite
         run: |
           cargo test
-          cargo bench -- --test
+          cargo bench --profile=dev -- --test
