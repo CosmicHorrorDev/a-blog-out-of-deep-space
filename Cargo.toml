@@ -39,7 +39,7 @@ default-features = false
 features = ["std"]
 
 [dependencies.tokio]
-version = "1.47.0"
+version = "1.47.1"
 features = ["fs", "macros", "rt-multi-thread"]
 
 [dependencies.tower]
