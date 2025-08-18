@@ -15,7 +15,7 @@ name = "router"
 harness = false
 
 [dependencies]
-brotli = "8.0.1"
+brotli = "8.0.2"
 flate2 = "1.1.2"
 mime = "0.3.17"
 pin-project-lite = "0.2.16"
