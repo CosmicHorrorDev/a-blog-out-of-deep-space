@@ -24,7 +24,7 @@ twox-hash = "2.1.2"
 walkdir = "2.5.0"
 
 [dependencies.axum]
-version = "0.8.4"
+version = "0.8.6"
 default-features = false
 features = ["http1", "tokio"]
 
