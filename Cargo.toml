@@ -20,7 +20,6 @@ flate2 = "1.1.2"
 mime = "0.3.17"
 pin-project-lite = "0.2.16"
 tracing = "0.1.41"
-twox-hash = "2.1.2"
 walkdir = "2.5.0"
 
 [dependencies.axum]
@@ -45,6 +44,11 @@ features = ["fs", "macros", "rt-multi-thread"]
 [dependencies.tower]
 version = "0.5.2"
 features = ["load-shed", "timeout"]
+
+[dependencies.twox-hash]
+version = "2.1.2"
+default-features = false
+features = ["std", "xxhash64"]
 
 [dev-dependencies]
 insta = "1.43.2"
