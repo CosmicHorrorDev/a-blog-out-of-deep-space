@@ -72,7 +72,7 @@ where
     }
 }
 
-// TODO: like github issue about why we use this instead of the default typed header
+// TODO: link github issue about why we use this instead of the default typed header
 // `headers::IfNoneMatch` impl
 pub struct IfNoneMatch(pub String);
 
