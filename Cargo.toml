@@ -3,7 +3,7 @@ name = "a-blog-out-of-deep-space"
 version = "0.1.0"
 edition = "2024"
 publish = false
-# TODO: what license to pick?
+license = "AGPL-3.0-only"
 
 [profile.deploy]
 inherits = "release"
