@@ -1,3 +1,10 @@
+> [!IMPORTANT]
+> Moved to codeberg :)
+>
+> <https://codeberg.org/CosmicHarper/a-blog-out-of-deep-space>
+
+---
+
 # _a-blog-out-of-deep-space_
 
 Long name? It's just `a-b<TAB>` away :D
